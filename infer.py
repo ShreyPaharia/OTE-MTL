@@ -8,6 +8,8 @@ import argparse
 from inference_iterator import InferenceIterator
 from data_utils import ABSADataReader, build_tokenizer, build_embedding_matrix, ABSADataReaderInference
 from models import CMLA, HAST, OTE
+import boto3
+import csv
 
 
 class Inferer:
@@ -24,6 +26,16 @@ class Inferer:
         # self.model.load_state_dict(torch.load(opt.state_dict_path, map_location=lambda storage, loc: storage))
         # switch model to evaluation mode
         self.model.eval()
+
+        # get a handle on s3
+        session = boto3.Session(
+            aws_access_key_id='XXXXXXXXXXXX',
+            aws_secret_access_key='XXXXXXXX',
+            region_name='XXXXXXXX')
+
+        self.s3 = session.resource('s3')
+        self.bucket = self.s3.Bucket('surveybuddy-responses')  # example: energy_market_procesing
+
         torch.autograd.set_grad_enabled(False)
 
     def evaluate(self, text):
@@ -40,7 +52,7 @@ class Inferer:
         return [t_ap_spans_pred, t_op_spans_pred, t_triplets_pred]
 
     def evaluateList(self,textList):
-        absa_data_reader = ABSADataReaderInference(data_dir=opt.data_dir, textList=textList);
+        absa_data_reader = ABSADataReaderInference(data_dir='textResponses.xlsx', textList=textList, bucket=self.bucket);
         dataset = absa_data_reader.get_dataset(self.tokenizer)
         self.inference_data_loader = InferenceIterator(data=dataset, batch_size=opt.batch_size)
 
@@ -117,7 +129,7 @@ if __name__ == '__main__':
     ]
     tripletsList = inf.evaluateList(textList)
 
-    for text,triplets in textList,tripletsList:
+    for (text,triplets) in zip(textList,tripletsList):
         words = text.split()
         polarity_map = {0:'N', 1:'NEU', 2:'NEG', 3:'POS'}
         for triplet in triplets:

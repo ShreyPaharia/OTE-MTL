@@ -5,6 +5,9 @@ import pickle
 import numpy as np
 from tag_utils import to2bio
 
+import io
+import pandas as pd
+
 def load_word_vec(path, word2idx=None, embed_dim=300):
     fin = open(path, 'r', encoding='utf-8', newline='\n', errors='ignore')
     word_vec = {}
@@ -241,12 +244,27 @@ class ABSADataReaderV2(ABSADataReader):
 
 class ABSADataReaderInference(object):
     #convert text list to amazon s3 file url
-    def __init__(self, data_dir, textList):
+    def __init__(self, data_dir, textList, bucket):
         self.tag_map, self.reverse_tag_map = self._get_tag_map()
         self.polarity_map = {'N': 0, 'NEU': 1, 'NEG': 2, 'POS': 3}  # NO_RELATION is 0
         self.reverse_polarity_map = {v: k for k, v in self.polarity_map.items()}
         self.data_dir = data_dir
         self.textList = textList
+
+
+        # get a handle on the object you want (i.e. your file)
+        obj = bucket.Object(key=self.data_dir)  # example: market/zone1/data.csv
+
+        # get the object
+        response = obj.get()
+
+        # read the contents of the file
+        data = response['Body'].read()
+        self.textList = pd.read_excel(io.BytesIO(data),header=None)[0].values.tolist()
+
+
+        # saving the file data in a new file test.csv
+
 
 
     def get_dataset(self, tokenizer):
