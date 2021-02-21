@@ -237,3 +237,49 @@ class ABSADataReaderV2(ABSADataReader):
             all_data.append(data)
         
         return all_data
+
+
+class ABSADataReaderInference(object):
+    #convert text list to amazon s3 file url
+    def __init__(self, data_dir, textList):
+        self.tag_map, self.reverse_tag_map = self._get_tag_map()
+        self.polarity_map = {'N': 0, 'NEU': 1, 'NEG': 2, 'POS': 3}  # NO_RELATION is 0
+        self.reverse_polarity_map = {v: k for k, v in self.polarity_map.items()}
+        self.data_dir = data_dir
+        self.textList = textList
+
+
+    def get_dataset(self, tokenizer):
+        return self._create_dataset('train', tokenizer)
+
+
+    @staticmethod
+    def _get_tag_map():
+        tag_list = ['O', 'B', 'I']
+        tag_map = {tag: i for i, tag in enumerate(tag_list)}
+        reverse_tag_map = {i: tag for i, tag in enumerate(tag_list)}
+        return tag_map, reverse_tag_map
+
+    def _create_dataset(self, set_type, tokenizer):
+        all_data = []
+
+        #TODO: read and close amazon file
+        # filename = os.path.join(self.data_dir, '%s.pair' % set_type)
+        # fp = open(filename, 'r', encoding='utf-8')
+        # lines = fp.readlines()
+        # fp.close()
+
+        lines = self.textList
+
+        for i in range(0, len(lines)):
+            text = lines[i]
+
+            text_indices = tokenizer.text_to_sequence(text)
+
+            data = {
+                'text_indices': text_indices
+
+            }
+            all_data.append(data)
+
+        return all_data
